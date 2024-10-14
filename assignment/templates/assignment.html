@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+    <h1>Hotel Booking Dashboard</h1>
+    
+    <!-- Date Picker for selecting the date range -->
+    <label for="dateRange">Select Date Range:</label>
+    <input type="text" id="dateRange" placeholder="Select date range" />
+
+    <!-- Charts -->
+    <div id="timeSeriesChart"></div>
+    <div id="visitorsByCountry"></div>
+    <div id="sparklineAdults"></div>
+    <div id="sparklineChildren"></div>
+    from flask import Flask, request, jsonify
+import pandas as pd
+
+app = Flask(__name__)
+
+# Load the dataset once at the start
+df = pd.read_csv('hotel_bookings_1000.csv')
+
+# Clean and preprocess the data
+df['arrival_date'] = pd.to_datetime(df['arrival_date_year'].astype(str) + '-' + 
+                                    df['arrival_date_month'] + '-' +
+                                    df['arrival_date_day_of_month'].astype(str))
+
+@app.route('/get-data', methods=['GET'])
+def get_data():
+    # Get date range from query parameters
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    # Filter the dataframe by the date range
+    if start_date and end_date:
+        filtered_data = df[(df['arrival_date'] >= start_date) & (df['arrival_date'] <= end_date)]
+    else:
+        filtered_data = df
+
+    # Prepare the data for the charts
+    time_series = filtered_data.groupby('arrival_date').agg(
+        visitors=pd.NamedAgg(column='adults', aggfunc='sum') +
+                 pd.NamedAgg(column='children', aggfunc='sum') +
+                 pd.NamedAgg(column='babies', aggfunc='sum')
+    ).reset_index().to_dict(orient='records')
+
+    country_data = filtered_data.groupby('country').size().reset_index(name='visitors').to_dict(orient='records')
+
+    adults_data = filtered_data.groupby('arrival_date')['adults'].sum().tolist()
+    children_data = filtered_data.groupby('arrival_date')['children'].sum().tolist()
+
+    return jsonify({
+        'time_series': time_series,
+        'countries': country_data,
+        'adults': adults_data,
+        'children': children_data
+    })
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+</body>
+</html>
