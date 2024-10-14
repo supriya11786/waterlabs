@@ -6,7 +6,6 @@ function fetchData() {
         fetch(`/get-data?start_date=${startDate}&end_date=${endDate}`)
             .then(response => response.json())
             .then(data => {
-                // Example of rendering time series data
                 var optionsTimeSeries = {
                     series: [{
                         name: 'Visitors',
@@ -24,8 +23,6 @@ function fetchData() {
                 };
                 var chart = new ApexCharts(document.querySelector("#time-series-chart"), optionsTimeSeries);
                 chart.render();
-
-                // Example of rendering country data
                 var optionsCountry = {
                     series: [{
                         name: 'Visitors',
